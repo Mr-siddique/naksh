@@ -72,6 +72,28 @@ const retryHostView = () =>
       node.props.accessibilityLabel === 'Retry',
   );
 
+const WITH_AI_REPLY: Message[] = [
+  { id: 'u1', type: 'user', text: 'Hi', createdAt: '2026-10-01T09:00:00.000Z' },
+  {
+    id: 'a1',
+    type: 'ai',
+    text: 'Saturn is strong.',
+    createdAt: '2026-10-01T09:01:00.000Z',
+    recommendations: [{ id: '1', type: 'gemstone', title: 'Blue Sapphire' }],
+  },
+];
+
+async function longPressAi() {
+  const bubble = tree.root.find(
+    (node: ReactTestInstance) =>
+      node.props.accessibilityLabel === 'AI Astrologer: Saturn is strong.' &&
+      typeof node.props.onLongPress === 'function',
+  );
+  await ReactTestRenderer.act(() => {
+    bubble.props.onLongPress();
+  });
+}
+
 async function typeAndSend(text: string) {
   const input = tree.root.find((node: ReactTestInstance) =>
     isHost(node, 'TextInput'),
@@ -221,5 +243,43 @@ describe('ConversationScreen', () => {
     await typeAndSend('Hello');
     expect(scroll).toHaveBeenCalledWith({ offset: 0, animated: true });
     scroll.mockRestore();
+  });
+
+  it('R4.1: long-pressing an AI message opens Reply, Copy, Delete and Cancel', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(WITH_AI_REPLY));
+
+    await longPressAi();
+    for (const label of ['Reply', 'Copy', 'Delete', 'Cancel']) {
+      findPressable(tree.root, label);
+    }
+  });
+
+  it('R4.3: Copy shows the "Copied" toast', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(WITH_AI_REPLY));
+
+    await longPressAi();
+    await ReactTestRenderer.act(() => {
+      findPressable(tree.root, 'Copy').props.onPress();
+    });
+    expect(hasText('Copied')).toBe(true);
+  });
+
+  it('R4.4: Delete removes the message and its cards from the timeline', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(WITH_AI_REPLY));
+    expect(hasText('Blue Sapphire')).toBe(true);
+
+    await longPressAi();
+    await ReactTestRenderer.act(() => {
+      findPressable(tree.root, 'Delete').props.onPress();
+    });
+    expect(hasText('Saturn is strong.')).toBe(false);
+    expect(hasText('Blue Sapphire')).toBe(false);
+    expect(hasText('Hi')).toBe(true);
   });
 });

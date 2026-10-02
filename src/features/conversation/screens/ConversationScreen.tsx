@@ -8,11 +8,40 @@ import {
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/useTheme';
+import { ActionSheet } from '../components/ActionSheet';
 import { Composer } from '../components/Composer';
 import { StatusView } from '../components/StatusView';
 import { TimelineList } from '../components/TimelineList';
+import { Toast } from '../components/Toast';
 import type { TimelineItem } from '../conversation.types';
 import { useConversationStore } from '../store/useConversationStore';
+
+function MessageActions() {
+  const messageId = useConversationStore(s => s.actionMessageId);
+  const closeActions = useConversationStore(s => s.closeActions);
+  const copyMessage = useConversationStore(s => s.copyMessage);
+  const deleteMessage = useConversationStore(s => s.deleteMessage);
+
+  return (
+    <ActionSheet
+      visible={messageId !== null}
+      onClose={closeActions}
+      options={
+        messageId === null
+          ? []
+          : [
+              { label: 'Reply', onPress: closeActions },
+              { label: 'Copy', onPress: () => copyMessage(messageId) },
+              {
+                label: 'Delete',
+                destructive: true,
+                onPress: () => deleteMessage(messageId),
+              },
+            ]
+      }
+    />
+  );
+}
 
 export function ConversationScreen() {
   const { colors } = useTheme();
@@ -63,9 +92,11 @@ export function ConversationScreen() {
       >
         <View style={[styles.screen, { backgroundColor: colors.background }]}>
           {body}
+          <Toast />
         </View>
         {isReady && <Composer onSent={scrollToLatest} />}
       </KeyboardAvoidingView>
+      <MessageActions />
     </View>
   );
 }

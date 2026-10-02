@@ -5,8 +5,6 @@ import type { AiMessage, Message } from '../../conversation.types';
 import { MessageRow } from '../MessageRow';
 import { isHost } from '../../../../testUtils';
 
-/** True for a host (native) element such as 'Text' or 'View'. */
-
 const CREATED_AT = '2026-10-01T09:00:00.000Z';
 
 const FIXTURES: Record<Message['type'], Message> = {
@@ -166,5 +164,48 @@ describe('MessageRow', () => {
         'Saturn Mahadasha',
       ]),
     );
+  });
+
+  it('R4.1: AI bubbles respond to long-press', () => {
+    const tree = render(make('ai'));
+    const bubble = tree.root.find(
+      (node: ReactTestInstance) => node.props.testID === 'message-bubble',
+    );
+    expect(typeof bubble.props.onLongPress).toBe('function');
+  });
+
+  it('R4.2: user, astrologer and system messages ignore long-press', () => {
+    for (const type of ['user', 'human', 'system'] as const) {
+      const tree = render(make(type));
+      const withLongPress = tree.root.findAll(
+        (node: ReactTestInstance) =>
+          typeof node.props.onLongPress === 'function',
+      );
+      expect(withLongPress).toHaveLength(0);
+    }
+  });
+
+  it('NFR4: screen readers can open AI message actions', () => {
+    const { useConversationStore } = jest.requireActual<
+      typeof import('../../store/useConversationStore')
+    >('../../store/useConversationStore');
+    const ai = make('ai');
+    useConversationStore.setState({ messages: [ai] });
+    const tree = render(ai);
+    const bubble = tree.root.find(
+      (node: ReactTestInstance) =>
+        node.props.testID === 'message-bubble' &&
+        typeof node.props.onAccessibilityAction === 'function',
+    );
+    expect(bubble.props.accessibilityActions).toEqual([
+      { name: 'longpress', label: 'Message actions' },
+    ]);
+    ReactTestRenderer.act(() =>
+      bubble.props.onAccessibilityAction({
+        nativeEvent: { actionName: 'longpress' },
+      }),
+    );
+    expect(useConversationStore.getState().actionMessageId).toBe(ai.id);
+    useConversationStore.getState().reset();
   });
 });

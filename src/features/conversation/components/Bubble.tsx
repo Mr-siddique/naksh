@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MESSAGE_GUTTER, radius, spacing } from '../../../theme/spacing';
 
 type BubbleProps = {
@@ -11,8 +11,11 @@ type BubbleProps = {
   isGrouped: boolean;
   text: string;
   textColor: string;
+  onLongPress?: () => void;
   children?: ReactNode;
 };
+
+const LONG_PRESS_ACTIONS = [{ name: 'longpress', label: 'Message actions' }];
 
 export function Bubble({
   align,
@@ -23,8 +26,25 @@ export function Bubble({
   isGrouped,
   text,
   textColor,
+  onLongPress,
   children,
 }: BubbleProps) {
+  const bubbleProps = {
+    testID: 'message-bubble',
+    accessible: true,
+    accessibilityLabel: `${sender}: ${text}`,
+    style: [
+      styles.bubble,
+      { backgroundColor },
+      borderColor
+        ? { borderColor, borderWidth: StyleSheet.hairlineWidth }
+        : null,
+    ],
+  };
+  const content = (
+    <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+  );
+
   return (
     <View
       testID="message-row"
@@ -43,20 +63,23 @@ export function Bubble({
           {sender}
         </Text>
       )}
-      <View
-        testID="message-bubble"
-        accessible
-        accessibilityLabel={`${sender}: ${text}`}
-        style={[
-          styles.bubble,
-          { backgroundColor },
-          borderColor
-            ? { borderColor, borderWidth: StyleSheet.hairlineWidth }
-            : null,
-        ]}
-      >
-        <Text style={[styles.text, { color: textColor }]}>{text}</Text>
-      </View>
+      {onLongPress ? (
+        <Pressable
+          {...bubbleProps}
+          onLongPress={onLongPress}
+          accessibilityActions={LONG_PRESS_ACTIONS}
+          accessibilityHint="Long-press for actions"
+          onAccessibilityAction={event => {
+            if (event.nativeEvent.actionName === 'longpress') {
+              onLongPress();
+            }
+          }}
+        >
+          {content}
+        </Pressable>
+      ) : (
+        <View {...bubbleProps}>{content}</View>
+      )}
       {children}
     </View>
   );

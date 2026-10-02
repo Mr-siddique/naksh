@@ -1,3 +1,4 @@
+import Clipboard from '@react-native-clipboard/clipboard';
 import { create } from 'zustand';
 import {
   fetchConversation,
@@ -10,20 +11,40 @@ export type LoadState = 'loading' | 'ready' | 'error';
 type ConversationState = {
   loadState: LoadState;
   messages: Message[];
+  actionMessageId: string | null;
+  toast: string | null;
 
   load(): Promise<void>;
   reset(): void;
+
   sendMessage(text: string): Promise<void>;
   retryMessage(id: string): Promise<void>;
+  openActions(id: string): void;
+  closeActions(): void;
+  copyMessage(id: string): void;
+  deleteMessage(id: string): void;
 };
 
-const initialState: Pick<ConversationState, 'loadState' | 'messages'> = {
+const initialState: Pick<
+  ConversationState,
+  'loadState' | 'messages' | 'actionMessageId' | 'toast'
+> = {
   loadState: 'loading',
   messages: [],
+  actionMessageId: null,
+  toast: null,
 };
+
+export const TOAST_MS = 1500;
 
 let session = 0;
 let localIdCounter = 0;
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+const clearToastTimer = () => {
+  clearTimeout(toastTimer);
+  toastTimer = undefined;
+};
 
 export const selectIsBusy = (state: ConversationState): boolean =>
   state.messages.some(m => m.type === 'user' && m.status === 'sending');
@@ -55,6 +76,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
 
     async load() {
       const startedIn = ++session;
+      clearToastTimer();
       set(initialState);
       try {
         const messages = await fetchConversation();
@@ -70,6 +92,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
 
     reset() {
       session++;
+      clearToastTimer();
       set(initialState);
     },
 
@@ -105,6 +128,40 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
       }
       setStatus(id, 'sending');
       await deliver(id, message.text);
+    },
+
+    openActions(id) {
+      const message = get().messages.find(m => m.id === id);
+      if (message?.type === 'ai') {
+        set({ actionMessageId: id });
+      }
+    },
+
+    closeActions() {
+      set({ actionMessageId: null });
+    },
+
+    copyMessage(id) {
+      const message = get().messages.find(m => m.id === id);
+      if (!message) {
+        set({ actionMessageId: null });
+        return;
+      }
+      Clipboard.setString(message.text);
+      clearToastTimer();
+      set({ toast: 'Copied', actionMessageId: null });
+      toastTimer = setTimeout(() => {
+        toastTimer = undefined;
+        set({ toast: null });
+      }, TOAST_MS);
+    },
+
+    deleteMessage(id) {
+      set(state => ({
+        messages: state.messages.filter(m => m.id !== id),
+        actionMessageId:
+          state.actionMessageId === id ? null : state.actionMessageId,
+      }));
     },
   };
 });
