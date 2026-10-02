@@ -67,4 +67,4 @@ It was a time-boxed build, so some things were left on purpose:
 
 - All data is mocked, nothing persists, and the AI reply is always the same canned text.
 - No recommendation detail screens, auth, or push notifications.
-- The delete animation uses Reanimated's layout transition on an inverted list, which can be fiddly across versions. If it misbehaves on a device, the fallback is a two-step delete (animate the row out, then remove it).
+- Delete removes the message straight away. A two-step delete with a confirmation would be safer.
