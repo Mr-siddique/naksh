@@ -1,5 +1,6 @@
 import { useTheme } from '../../../theme/useTheme';
 import type { AiMessage as AiMessageType } from '../conversation.types';
+import { RecommendationRow } from '../recommendations/RecommendationRow';
 import { Bubble } from './Bubble';
 
 type AiMessageProps = {
@@ -20,6 +21,11 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
       isGrouped={isGrouped}
       text={message.text}
       textColor={colors.text}
-    />
+    >
+      <RecommendationRow
+        messageId={message.id}
+        recommendations={message.recommendations}
+      />
+    </Bubble>
   );
 }

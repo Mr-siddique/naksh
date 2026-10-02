@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native';
 import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
-import type { Message } from '../../conversation.types';
+import type { AiMessage, Message } from '../../conversation.types';
 import { MessageRow } from '../MessageRow';
 
 /** True for a host (native) element such as 'Text' or 'View'. */
@@ -123,5 +123,49 @@ describe('MessageRow', () => {
         isHost(node, 'View') && node.props.testID === 'message-bubble',
     );
     expect(bubble.props.accessibilityLabel).toBe('AI Astrologer: ai text');
+  });
+
+  it('R3.1, R1.8: AI messages render their own cards even when ids repeat', () => {
+    const recs = [
+      { id: '1', type: 'tarot', title: 'Career Tarot Reading' },
+      { id: '2', type: 'gemstone', title: 'Blue Sapphire' },
+    ];
+    const first: AiMessage = {
+      id: 'a1',
+      type: 'ai',
+      text: 'first',
+      createdAt: CREATED_AT,
+      recommendations: recs,
+    };
+    const second: AiMessage = {
+      id: 'a2',
+      type: 'ai',
+      text: 'second',
+      createdAt: CREATED_AT,
+      recommendations: [
+        { id: '1', type: 'article', title: 'Saturn Mahadasha' },
+      ],
+    };
+    let tree!: ReactTestRenderer.ReactTestRenderer;
+    ReactTestRenderer.act(() => {
+      tree = ReactTestRenderer.create(
+        <>
+          <MessageRow
+            message={first}
+            isGrouped={false}
+            showSentStatus={false}
+          />
+          <MessageRow message={second} isGrouped showSentStatus={false} />
+        </>,
+      );
+    });
+    const titles = hostTexts(tree);
+    expect(titles).toEqual(
+      expect.arrayContaining([
+        'Career Tarot Reading',
+        'Blue Sapphire',
+        'Saturn Mahadasha',
+      ]),
+    );
   });
 });

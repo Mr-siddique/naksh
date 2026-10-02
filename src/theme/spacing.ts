@@ -14,3 +14,5 @@ export const radius = {
 } as const;
 
 export const MIN_TOUCH = 44;
+
+export const MESSAGE_GUTTER = spacing.lg;

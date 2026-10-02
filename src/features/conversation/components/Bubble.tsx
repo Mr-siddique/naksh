@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { radius, spacing } from '../../../theme/spacing';
+import { MESSAGE_GUTTER, radius, spacing } from '../../../theme/spacing';
 
 type BubbleProps = {
   align: 'left' | 'right';
@@ -64,7 +64,7 @@ export function Bubble({
 
 const styles = StyleSheet.create({
   row: {
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: MESSAGE_GUTTER,
   },
   left: {
     alignItems: 'flex-start',
