@@ -1,10 +1,11 @@
 import React from 'react';
+import { TextInput } from 'react-native';
 import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 import { sendMessage as sendToApi } from '../../../../services/chatApi';
 import type { Message } from '../../conversation.types';
 import { useConversationStore } from '../../store/useConversationStore';
 import { Composer } from '../Composer';
-import { isHost } from '../../../../testUtils';
+import { findPressable, isHost } from '../../../../testUtils';
 
 jest.mock('../../../../services/chatApi');
 const mockSend = jest.mocked(sendToApi);
@@ -43,6 +44,8 @@ beforeEach(() => {
 
 afterEach(() => {
   ReactTestRenderer.act(() => tree.unmount());
+  jest.restoreAllMocks();
+  jest.useRealTimers();
 });
 
 describe('Composer', () => {
@@ -99,5 +102,52 @@ describe('Composer', () => {
     expect(host.props.accessibilityState).toEqual(
       expect.objectContaining({ disabled: true }),
     );
+  });
+
+  it('R4.7: shows the reply preview with the quoted text and focuses the input', () => {
+    jest.useFakeTimers();
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    render();
+    expect(focus).not.toHaveBeenCalled();
+
+    ReactTestRenderer.act(() => {
+      useConversationStore.setState({
+        replyTo: { messageId: 'a1', text: 'Saturn is strong this year.' },
+      });
+    });
+    ReactTestRenderer.act(() => {
+      jest.runOnlyPendingTimers();
+    });
+
+    const texts = tree.root
+      .findAll(
+        (node: ReactTestInstance) =>
+          isHost(node, 'Text') && typeof node.props.children === 'string',
+      )
+      .map(node => node.props.children);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'Replying to AI Astrologer',
+        'Saturn is strong this year.',
+      ]),
+    );
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+
+  it('R4.8: the × button removes the reply preview', () => {
+    useConversationStore.setState({
+      replyTo: { messageId: 'a1', text: 'Saturn is strong this year.' },
+    });
+    render();
+    ReactTestRenderer.act(() =>
+      findPressable(tree.root, 'Cancel reply').props.onPress(),
+    );
+    expect(useConversationStore.getState().replyTo).toBeNull();
+    expect(
+      tree.root.findAll(
+        (node: ReactTestInstance) =>
+          node.props.accessibilityLabel === 'Cancel reply',
+      ),
+    ).toHaveLength(0);
   });
 });

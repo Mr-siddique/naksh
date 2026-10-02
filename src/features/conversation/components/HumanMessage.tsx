@@ -1,4 +1,5 @@
 import { useTheme } from '../../../theme/useTheme';
+import { HUMAN_SENDER } from '../constants';
 import type { HumanMessage as HumanMessageType } from '../conversation.types';
 import { Bubble } from './Bubble';
 
@@ -13,7 +14,7 @@ export function HumanMessage({ message, isGrouped }: HumanMessageProps) {
   return (
     <Bubble
       align="left"
-      sender="Astrologer"
+      sender={HUMAN_SENDER}
       senderColor={colors.humanAccent}
       backgroundColor={colors.humanBubble}
       isGrouped={isGrouped}

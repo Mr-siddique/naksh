@@ -4,7 +4,7 @@ import {
   fetchConversation,
   sendMessage as sendToApi,
 } from '../../../services/chatApi';
-import type { Message, SendStatus } from '../conversation.types';
+import type { Message, ReplyRef, SendStatus } from '../conversation.types';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 
@@ -13,6 +13,7 @@ type ConversationState = {
   messages: Message[];
   actionMessageId: string | null;
   toast: string | null;
+  replyTo: ReplyRef | null;
 
   load(): Promise<void>;
   reset(): void;
@@ -23,16 +24,19 @@ type ConversationState = {
   closeActions(): void;
   copyMessage(id: string): void;
   deleteMessage(id: string): void;
+  setReplyTo(id: string): void;
+  clearReply(): void;
 };
 
 const initialState: Pick<
   ConversationState,
-  'loadState' | 'messages' | 'actionMessageId' | 'toast'
+  'loadState' | 'messages' | 'actionMessageId' | 'toast' | 'replyTo'
 > = {
   loadState: 'loading',
   messages: [],
   actionMessageId: null,
   toast: null,
+  replyTo: null,
 };
 
 export const TOAST_MS = 1500;
@@ -103,6 +107,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
       }
       const id = `local-${++localIdCounter}`;
       set(state => ({
+        replyTo: null,
         messages: [
           ...state.messages,
           {
@@ -111,6 +116,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
             text,
             createdAt: new Date().toISOString(),
             status: 'sending',
+            ...(state.replyTo && { replyTo: state.replyTo }),
           },
         ],
       }));
@@ -161,7 +167,24 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
         messages: state.messages.filter(m => m.id !== id),
         actionMessageId:
           state.actionMessageId === id ? null : state.actionMessageId,
+        replyTo: state.replyTo?.messageId === id ? null : state.replyTo,
       }));
+    },
+
+    setReplyTo(id) {
+      const message = get().messages.find(m => m.id === id);
+      if (message?.type !== 'ai') {
+        set({ actionMessageId: null });
+        return;
+      }
+      set({
+        replyTo: { messageId: id, text: message.text },
+        actionMessageId: null,
+      });
+    },
+
+    clearReply() {
+      set({ replyTo: null });
     },
   };
 });

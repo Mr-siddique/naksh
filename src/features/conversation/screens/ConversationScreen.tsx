@@ -20,6 +20,7 @@ function MessageActions() {
   const messageId = useConversationStore(s => s.actionMessageId);
   const closeActions = useConversationStore(s => s.closeActions);
   const copyMessage = useConversationStore(s => s.copyMessage);
+  const setReplyTo = useConversationStore(s => s.setReplyTo);
   const deleteMessage = useConversationStore(s => s.deleteMessage);
 
   return (
@@ -30,7 +31,7 @@ function MessageActions() {
         messageId === null
           ? []
           : [
-              { label: 'Reply', onPress: closeActions },
+              { label: 'Reply', onPress: () => setReplyTo(messageId) },
               { label: 'Copy', onPress: () => copyMessage(messageId) },
               {
                 label: 'Delete',

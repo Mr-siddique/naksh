@@ -111,4 +111,21 @@ describe('UserMessage status', () => {
     expect(style.minHeight).toBeGreaterThanOrEqual(44);
     expect(style.minWidth).toBeGreaterThanOrEqual(44);
   });
+
+  it('R4.9: shows a quote of the replied-to message inside the bubble', () => {
+    render({
+      ...message('sent'),
+      replyTo: { messageId: 'a1', text: 'Saturn is strong this year.' },
+    });
+    expect(texts()).toEqual(
+      expect.arrayContaining(['AI Astrologer', 'Saturn is strong this year.']),
+    );
+    const bubble = tree.root.find(
+      (node: ReactTestInstance) =>
+        isHost(node, 'View') && node.props.testID === 'message-bubble',
+    );
+    expect(bubble.props.accessibilityLabel).toBe(
+      'You, replying to AI Astrologer, "Saturn is strong this year.": Hi',
+    );
+  });
 });

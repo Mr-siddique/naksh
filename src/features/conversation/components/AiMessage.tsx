@@ -1,4 +1,5 @@
 import { useTheme } from '../../../theme/useTheme';
+import { AI_SENDER } from '../constants';
 import type { AiMessage as AiMessageType } from '../conversation.types';
 import { RecommendationRow } from '../recommendations/RecommendationRow';
 import { useConversationStore } from '../store/useConversationStore';
@@ -16,7 +17,7 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
   return (
     <Bubble
       align="left"
-      sender="AI Astrologer"
+      sender={AI_SENDER}
       senderColor={colors.primary}
       backgroundColor={colors.aiBubble}
       borderColor={colors.border}

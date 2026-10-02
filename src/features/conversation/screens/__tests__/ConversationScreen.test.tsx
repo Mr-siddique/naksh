@@ -282,4 +282,27 @@ describe('ConversationScreen', () => {
     expect(hasText('Blue Sapphire')).toBe(false);
     expect(hasText('Hi')).toBe(true);
   });
+
+  it('R4.7, R4.9: Reply shows a preview and the sent message quotes it', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(WITH_AI_REPLY));
+
+    await longPressAi();
+    await ReactTestRenderer.act(() => {
+      findPressable(tree.root, 'Reply').props.onPress();
+    });
+    expect(hasText('Replying to AI Astrologer')).toBe(true);
+
+    await typeAndSend('Tell me more');
+    expect(hasText('Replying to AI Astrologer')).toBe(false);
+    const quoted = tree.root.findAll(
+      (node: ReactTestInstance) =>
+        typeof node.props.accessibilityLabel === 'string' &&
+        node.props.accessibilityLabel.startsWith(
+          'You, replying to AI Astrologer',
+        ),
+    );
+    expect(quoted.length).toBeGreaterThan(0);
+  });
 });

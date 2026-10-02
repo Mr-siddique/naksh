@@ -68,6 +68,7 @@ export function UserMessage({
       isGrouped={isGrouped}
       text={message.text}
       textColor={colors.onUserBubble}
+      quote={message.replyTo?.text}
     >
       {statusView}
     </Bubble>

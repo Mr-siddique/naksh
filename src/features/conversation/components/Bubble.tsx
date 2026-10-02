@@ -1,6 +1,9 @@
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MESSAGE_GUTTER, radius, spacing } from '../../../theme/spacing';
+import { AI_SENDER } from '../constants';
+import { truncate } from '../utils/truncate';
+import { ReplyQuote } from './ReplyQuote';
 
 type BubbleProps = {
   align: 'left' | 'right';
@@ -11,6 +14,7 @@ type BubbleProps = {
   isGrouped: boolean;
   text: string;
   textColor: string;
+  quote?: string;
   onLongPress?: () => void;
   children?: ReactNode;
 };
@@ -26,13 +30,16 @@ export function Bubble({
   isGrouped,
   text,
   textColor,
+  quote,
   onLongPress,
   children,
 }: BubbleProps) {
   const bubbleProps = {
     testID: 'message-bubble',
     accessible: true,
-    accessibilityLabel: `${sender}: ${text}`,
+    accessibilityLabel: quote
+      ? `${sender}, replying to ${AI_SENDER}, "${truncate(quote, 80)}": ${text}`
+      : `${sender}: ${text}`,
     style: [
       styles.bubble,
       { backgroundColor },
@@ -42,7 +49,10 @@ export function Bubble({
     ],
   };
   const content = (
-    <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+    <>
+      {quote ? <ReplyQuote text={quote} color={textColor} /> : null}
+      <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+    </>
   );
 
   return (
