@@ -4,7 +4,14 @@ import {
   fetchConversation,
   sendMessage as sendToApi,
 } from '../../../services/chatApi';
-import type { Message, ReplyRef, SendStatus } from '../conversation.types';
+import type {
+  Feedback,
+  FeedbackReason,
+  Message,
+  ReplyRef,
+  SendStatus,
+} from '../conversation.types';
+import { applyRating, toggleFeedbackReason } from '../utils/nextFeedback';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 
@@ -26,6 +33,8 @@ type ConversationState = {
   deleteMessage(id: string): void;
   setReplyTo(id: string): void;
   clearReply(): void;
+  rate(id: string, rating: Feedback['rating']): void;
+  toggleReason(id: string, reason: FeedbackReason): void;
 };
 
 const initialState: Pick<
@@ -60,6 +69,25 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
         m.id === id && m.type === 'user' ? { ...m, status } : m,
       ),
     }));
+
+  const updateFeedback = (
+    id: string,
+    next: (current: Feedback | undefined) => Feedback | undefined,
+  ) =>
+    set(state => {
+      const index = state.messages.findIndex(m => m.id === id);
+      const message = state.messages[index];
+      if (message?.type !== 'ai') {
+        return state;
+      }
+      const feedback = next(message.feedback);
+      if (feedback === message.feedback) {
+        return state;
+      }
+      const messages = [...state.messages];
+      messages[index] = { ...message, feedback };
+      return { messages };
+    });
 
   const deliver = async (id: string, text: string) => {
     const startedIn = session;
@@ -185,6 +213,14 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
 
     clearReply() {
       set({ replyTo: null });
+    },
+
+    rate(id, rating) {
+      updateFeedback(id, current => applyRating(current, rating));
+    },
+
+    toggleReason(id, reason) {
+      updateFeedback(id, current => toggleFeedbackReason(current, reason));
     },
   };
 });

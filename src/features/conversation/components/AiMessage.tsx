@@ -4,6 +4,7 @@ import type { AiMessage as AiMessageType } from '../conversation.types';
 import { RecommendationRow } from '../recommendations/RecommendationRow';
 import { useConversationStore } from '../store/useConversationStore';
 import { Bubble } from './Bubble';
+import { FeedbackBar } from './FeedbackBar';
 
 type AiMessageProps = {
   message: AiMessageType;
@@ -30,6 +31,7 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
         messageId={message.id}
         recommendations={message.recommendations}
       />
+      <FeedbackBar messageId={message.id} feedback={message.feedback} />
     </Bubble>
   );
 }

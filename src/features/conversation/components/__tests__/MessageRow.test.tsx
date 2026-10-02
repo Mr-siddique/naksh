@@ -48,7 +48,6 @@ const hostTexts = (tree: ReactTestRenderer.ReactTestRenderer) =>
     )
     .map(node => node.props.children as string);
 
-/** Style of the row's outer host view. */
 const rowStyle = (tree: ReactTestRenderer.ReactTestRenderer) =>
   StyleSheet.flatten(
     tree.root.find(
@@ -74,7 +73,7 @@ describe('MessageRow', () => {
 
   it('R2.2: renders an AI message left-aligned and labelled "AI Astrologer"', () => {
     const tree = render(make('ai'));
-    expect(hostTexts(tree)).toEqual(['AI Astrologer', 'ai text']);
+    expect(hostTexts(tree).slice(0, 2)).toEqual(['AI Astrologer', 'ai text']);
     expect(rowStyle(tree).alignItems).toBe('flex-start');
   });
 
@@ -107,7 +106,7 @@ describe('MessageRow', () => {
     const lead = render(make('ai'));
     const grouped = render(make('ai'), true);
 
-    expect(hostTexts(grouped)).toEqual(['ai text']);
+    expect(hostTexts(grouped)).not.toContain('AI Astrologer');
     expect(rowStyle(grouped).marginTop).toBeLessThan(
       rowStyle(lead).marginTop as number,
     );
