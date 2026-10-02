@@ -1,97 +1,73 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# naksh
 
-# Getting Started
+A chat screen for talking to an AI astrologer, built for the MyNaksh machine-coding round. React Native 0.87 (bare, New Architecture), TypeScript, Zustand, Reanimated 4. Everything is mocked, so there's no backend to set up.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
-
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
+## Running it
 
 ```sh
-# Using npm
+npm install
+cd ios && bundle exec pod install && cd ..   # first time, and after native dep changes
 npm start
-
-# OR using Yarn
-yarn start
+npm run ios        # or: npm run android
 ```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+npm test           # Jest
+npm run verify     # lint + typecheck + tests, the bar for every change
 ```
 
-### iOS
+Needs Node 22.11 or newer.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## Trying the failure cases
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+In a debug build there's a ⚙︎ button in the header. It opens a sheet with four scenarios: **Normal**, **Empty conversation**, **Load fails** and **Sends fail**. Picking one reloads the conversation under that scenario, so you can see the empty, error and failed-send states (with Retry) without editing any code. The button doesn't exist in release builds.
 
-```sh
-bundle install
+## How it's laid out
+
+```
+src/
+  features/conversation/
+    components/        bubbles, composer, action sheet, feedback bar, toast...
+    recommendations/   the registry and the card components
+    store/             one Zustand store
+    utils/             pure helpers (timeline, streaming, feedback, ...)
+    screens/
+  services/chatApi.ts  the mock API (delays, failures, scenarios)
+  theme/               colors, spacing, motion
 ```
 
-Then, and every time you update your native dependencies, run:
+Code lives in its feature folder until a second feature needs it. Tests sit next to the code, and each test name starts with the requirement it covers (for example `R6.3: ...`). The specs behind all of this are in `specs/` if you want the reasoning.
 
-```sh
-bundle exec pod install
-```
+## Components
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+The screen is a list of messages with a composer underneath. `MessageRow` picks the right component for each message type: `UserMessage`, `AiMessage`, `HumanMessage` or `SystemMessage`. They all sit on one shared `Bubble`, so alignment, grouping, accessibility labels and long-press are handled in a single place. Date separators and the timeline grouping come from one pure function, `buildTimeline`.
 
-```sh
-# Using npm
-npm run ios
+## State
 
-# OR using Yarn
-yarn ios
-```
+A single Zustand store holds the messages, load state, reply target, streaming progress, the open action sheet and the toast. I picked Zustand because components can subscribe to just the slice they need, and that matters here: the streaming text updates many times a second and only that one row should re-render. Context would have re-rendered everything below it. Redux Toolkit would have worked, but it's more ceremony than this screen needs.
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+Async work (loading, sending, streaming) is guarded by a session counter. If you reload or leave the screen while something is in flight, the old result is dropped instead of writing into the new state.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Recommendations
 
-## Step 3: Modify your app
+Each AI message can carry cards (gemstone, tarot, consultation, article, promotion, remedy). A registry maps a type to its icon, label, accent colour and an optional `Component`. Rendering a card is just a lookup, and unknown types fall back to a generic card instead of crashing.
 
-Now that you have successfully run the app, let's make changes!
+To add something new, like Panchang, add one entry to `RECOMMENDATION_CONFIG` (and the type to `RecommendationType`). If it needs a different look, give it a `Component` and nothing else in the list changes. Tapping any card shows an Alert, since detail screens are out of scope.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## Performance
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+- The message list is an inverted, virtualized `FlatList`, so new messages land at the bottom and the list keeps the reader's place when rows are added or removed.
+- Rows are memoized and receive stable props, so rating one message re-renders only that message.
+- Streaming is a `requestAnimationFrame` loop based on elapsed time, not frame count, so the speed doesn't depend on the device. Only the text of the streaming row re-renders, and the loop is cancelled on reload and unmount.
+- Animations run on the UI thread through Reanimated and respect the system's Reduce Motion setting. A message only animates in when it's brand new, so rows scrolling back into view stay still.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Trade-offs
 
-## Congratulations! :tada:
+It was a time-boxed build, so some things were left on purpose:
 
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- All data is mocked, nothing persists, and the AI reply is always the same canned text.
+- No recommendation detail screens, auth, or push notifications.
+- The action sheet has an enter animation but no exit animation.
+- The delete animation uses Reanimated's layout transition on an inverted list, which can be fiddly across versions. If it misbehaves on a device, the fallback is a two-step delete (animate the row out, then remove it).
+- A screen reader isn't told when a streamed reply finishes, which I'd add next.
+- I checked the UI on the iOS simulator. Android and the animations on real devices still need a manual pass.
