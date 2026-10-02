@@ -1,4 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { FADE_IN_DOWN, FADE_OUT_DOWN } from '../../../theme/motion';
 import { MIN_TOUCH, radius, spacing } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import { AI_SENDER } from '../constants';
@@ -14,7 +16,9 @@ export function ReplyPreview({ reply, onClose }: ReplyPreviewProps) {
   const { colors } = useTheme();
 
   return (
-    <View
+    <Animated.View
+      entering={FADE_IN_DOWN}
+      exiting={FADE_OUT_DOWN}
       style={[
         styles.container,
         { backgroundColor: colors.surface, borderTopColor: colors.border },
@@ -47,7 +51,7 @@ export function ReplyPreview({ reply, onClose }: ReplyPreviewProps) {
       >
         <Text style={[styles.closeIcon, { color: colors.textMuted }]}>×</Text>
       </Pressable>
-    </View>
+    </Animated.View>
   );
 }
 

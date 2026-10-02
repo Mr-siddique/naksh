@@ -116,7 +116,9 @@ describe('AiMessage while streaming', () => {
     const extras = () =>
       tree.root.find(
         (node: ReactTestInstance) =>
-          'entering' in node.props && node.props.style !== undefined,
+          'entering' in node.props &&
+          node.props.testID !== 'message-row' &&
+          node.props.style !== undefined,
       );
     setStreaming(null);
     expect(extras().props.entering).toBeDefined();

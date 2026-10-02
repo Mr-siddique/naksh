@@ -5,10 +5,22 @@ import {
   StyleSheet,
   Text,
   type TextStyle,
-  View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import {
+  FADE_IN,
+  FADE_IN_DOWN,
+  FAST_TIMING,
+  TIMING,
+} from '../../../theme/motion';
 import { MESSAGE_GUTTER, radius, spacing } from '../../../theme/spacing';
 import { AI_SENDER } from '../constants';
+import { isFresh } from '../utils/isFresh';
 import { truncate } from '../utils/truncate';
 import { ReplyQuote } from './ReplyQuote';
 
@@ -21,10 +33,27 @@ type BubbleProps = {
   isGrouped: boolean;
   text: string;
   textColor: string;
+  createdAt: string;
   quote?: string;
   renderText?: (style: StyleProp<TextStyle>) => ReactNode;
   onLongPress?: () => void;
   children?: ReactNode;
+};
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const PRESSED_SCALE = 0.97;
+const EXIT_SCALE = 0.95;
+
+const exitDelete = () => {
+  'worklet';
+  return {
+    initialValues: { opacity: 1, transform: [{ scale: 1 }] },
+    animations: {
+      opacity: withTiming(0, TIMING),
+      transform: [{ scale: withTiming(EXIT_SCALE, TIMING) }],
+    },
+  };
 };
 
 const LONG_PRESS_ACTIONS = [{ name: 'longpress', label: 'Message actions' }];
@@ -38,11 +67,18 @@ export function Bubble({
   isGrouped,
   text,
   textColor,
+  createdAt,
   quote,
   renderText,
   onLongPress,
   children,
 }: BubbleProps) {
+  const scale = useSharedValue(1);
+  const pressStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const fresh = isFresh(createdAt);
+  const entering = align === 'right' ? FADE_IN_DOWN : FADE_IN;
   const textStyle = [styles.text, { color: textColor }];
   const bubbleProps = {
     testID: 'message-bubble',
@@ -52,6 +88,7 @@ export function Bubble({
       : `${sender}: ${text}`,
     style: [
       styles.bubble,
+      pressStyle,
       { backgroundColor },
       borderColor
         ? { borderColor, borderWidth: StyleSheet.hairlineWidth }
@@ -70,8 +107,10 @@ export function Bubble({
   );
 
   return (
-    <View
+    <Animated.View
       testID="message-row"
+      entering={fresh ? entering : undefined}
+      exiting={exitDelete}
       style={[
         styles.row,
         align === 'right' ? styles.right : styles.left,
@@ -87,8 +126,22 @@ export function Bubble({
           {sender}
         </Text>
       )}
-      <Pressable
+      <AnimatedPressable
         {...bubbleProps}
+        onPressIn={
+          onLongPress
+            ? () => {
+                scale.value = withTiming(PRESSED_SCALE, FAST_TIMING);
+              }
+            : undefined
+        }
+        onPressOut={
+          onLongPress
+            ? () => {
+                scale.value = withSpring(1, TIMING);
+              }
+            : undefined
+        }
         onLongPress={onLongPress}
         accessibilityActions={onLongPress ? LONG_PRESS_ACTIONS : undefined}
         accessibilityHint={onLongPress ? 'Long-press for actions' : undefined}
@@ -99,9 +152,9 @@ export function Bubble({
         }}
       >
         {content}
-      </Pressable>
+      </AnimatedPressable>
       {children}
-    </View>
+    </Animated.View>
   );
 }
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
-import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
-import { MOTION } from '../../../theme/motion';
+import Animated from 'react-native-reanimated';
+import { FADE_IN } from '../../../theme/motion';
 import { useTheme } from '../../../theme/useTheme';
 import { AI_SENDER } from '../constants';
 import type { AiMessage as AiMessageType } from '../conversation.types';
@@ -15,8 +15,6 @@ type AiMessageProps = {
   message: AiMessageType;
   isGrouped: boolean;
 };
-
-const REVEAL = FadeIn.duration(MOTION.base).reduceMotion(ReduceMotion.System);
 
 export function AiMessage({ message, isGrouped }: AiMessageProps) {
   const { colors } = useTheme();
@@ -38,6 +36,7 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
       borderColor={colors.border}
       isGrouped={isGrouped}
       text={message.text}
+      createdAt={message.createdAt}
       textColor={colors.text}
       renderText={
         isStreaming
@@ -55,7 +54,7 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
     >
       {isStreaming ? null : (
         <Animated.View
-          entering={hasStreamed ? REVEAL : undefined}
+          entering={hasStreamed ? FADE_IN : undefined}
           style={styles.extras}
         >
           <RecommendationRow

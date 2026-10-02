@@ -1,4 +1,7 @@
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { FADE_IN_FAST, FADE_OUT_FAST } from '../../../theme/motion';
 import { DISABLED_OPACITY, MIN_TOUCH, spacing } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import type { UserMessage as UserMessageType } from '../conversation.types';
@@ -46,6 +49,11 @@ export function UserMessage({
 }: UserMessageProps) {
   const { colors } = useTheme();
   const { status } = message;
+  const [initialStatus] = useState(status);
+  const [hasChanged, setHasChanged] = useState(false);
+  if (status !== initialStatus && !hasChanged) {
+    setHasChanged(true);
+  }
 
   let statusView = null;
   if (status === 'failed') {
@@ -67,10 +75,19 @@ export function UserMessage({
       backgroundColor={colors.userBubble}
       isGrouped={isGrouped}
       text={message.text}
+      createdAt={message.createdAt}
       textColor={colors.onUserBubble}
       quote={message.replyTo?.text}
     >
-      {statusView}
+      {statusView ? (
+        <Animated.View
+          key={status}
+          entering={hasChanged ? FADE_IN_FAST : undefined}
+          exiting={FADE_OUT_FAST}
+        >
+          {statusView}
+        </Animated.View>
+      ) : null}
     </Bubble>
   );
 }

@@ -1,12 +1,13 @@
 import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import {
   DISABLED_OPACITY,
   MIN_TOUCH,
   radius,
   spacing,
 } from '../../../theme/spacing';
-import { MOTION } from '../../../theme/motion';
+import { LAYOUT_TRANSITION, MOTION } from '../../../theme/motion';
 import { useTheme } from '../../../theme/useTheme';
 import {
   selectIsBusy,
@@ -51,7 +52,9 @@ export function Composer({ onSent }: ComposerProps) {
 
   return (
     <View>
-      {replyTo ? <ReplyPreview reply={replyTo} onClose={clearReply} /> : null}
+      <Animated.View layout={LAYOUT_TRANSITION}>
+        {replyTo ? <ReplyPreview reply={replyTo} onClose={clearReply} /> : null}
+      </Animated.View>
       <View
         style={[
           styles.container,

@@ -7,12 +7,13 @@ import {
   View,
 } from 'react-native';
 import Animated, {
-  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
+  withSequence,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import { MOTION } from '../../../theme/motion';
+import { FAST_TIMING, TIMING } from '../../../theme/motion';
 import { MIN_TOUCH, radius, spacing } from '../../../theme/spacing';
 import { useTheme } from '../../../theme/useTheme';
 import { FEEDBACK_REASONS } from '../constants';
@@ -29,10 +30,59 @@ const RATINGS = [
   { rating: 'dislike', icon: '👎', label: 'Dislike' },
 ] as const;
 
-const EXPAND_TIMING = {
-  duration: MOTION.base,
-  reduceMotion: ReduceMotion.System,
+const POP_SCALE = 1.2;
+
+type RatingButtonProps = {
+  icon: string;
+  label: string;
+  selected: boolean;
+  onPress: () => void;
 };
+
+function RatingButton({ icon, label, selected, onPress }: RatingButtonProps) {
+  const { colors } = useTheme();
+  const scale = useSharedValue(1);
+  const wasSelected = useRef(selected);
+
+  useEffect(() => {
+    if (selected && !wasSelected.current) {
+      scale.value = withSequence(
+        withTiming(POP_SCALE, FAST_TIMING),
+        withSpring(1, FAST_TIMING),
+      );
+    }
+    wasSelected.current = selected;
+  }, [selected, scale]);
+
+  const popStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ selected }}
+      style={styles.rating}
+    >
+      <Animated.View
+        style={[
+          styles.ratingFill,
+          selected && {
+            backgroundColor: colors.chipSelected,
+            borderColor: colors.primary,
+          },
+          popStyle,
+        ]}
+      >
+        <Text style={[styles.icon, !selected && styles.unselectedIcon]}>
+          {icon}
+        </Text>
+      </Animated.View>
+    </Pressable>
+  );
+}
 
 export function FeedbackBar({ messageId, feedback }: FeedbackBarProps) {
   const { colors } = useTheme();
@@ -52,7 +102,7 @@ export function FeedbackBar({ messageId, feedback }: FeedbackBarProps) {
     if (measuredHeight.current !== null) {
       chipsHeight.value = withTiming(
         isDisliked ? measuredHeight.current : 0,
-        EXPAND_TIMING,
+        TIMING,
       );
     }
   }, [isDisliked, chipsHeight]);
@@ -71,33 +121,15 @@ export function FeedbackBar({ messageId, feedback }: FeedbackBarProps) {
   return (
     <View style={styles.container}>
       <View style={styles.ratings}>
-        {RATINGS.map(({ rating, icon, label }) => {
-          const selected = feedback?.rating === rating;
-          return (
-            <Pressable
-              key={rating}
-              onPress={() => rate(messageId, rating)}
-              accessibilityRole="button"
-              accessibilityLabel={label}
-              accessibilityState={{ selected }}
-              style={styles.rating}
-            >
-              <View
-                style={[
-                  styles.ratingFill,
-                  selected && {
-                    backgroundColor: colors.chipSelected,
-                    borderColor: colors.primary,
-                  },
-                ]}
-              >
-                <Text style={[styles.icon, !selected && styles.unselectedIcon]}>
-                  {icon}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
+        {RATINGS.map(({ rating, icon, label }) => (
+          <RatingButton
+            key={rating}
+            icon={icon}
+            label={label}
+            selected={feedback?.rating === rating}
+            onPress={() => rate(messageId, rating)}
+          />
+        ))}
       </View>
       <Animated.View
         testID="feedback-chips"

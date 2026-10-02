@@ -1,6 +1,7 @@
 import { type Ref, useMemo } from 'react';
 import { type FlatList, type ListRenderItem, StyleSheet } from 'react-native';
 import Animated from 'react-native-reanimated';
+import { LAYOUT_TRANSITION } from '../../../theme/motion';
 import { spacing } from '../../../theme/spacing';
 import type { TimelineItem } from '../conversation.types';
 import { useConversationStore } from '../store/useConversationStore';
@@ -42,6 +43,7 @@ export function TimelineList({ listRef }: TimelineListProps) {
       keyExtractor={keyExtractor}
       renderItem={renderItem}
       maintainVisibleContentPosition={MAINTAIN_POSITION}
+      itemLayoutAnimation={LAYOUT_TRANSITION}
       contentContainerStyle={styles.content}
     />
   );

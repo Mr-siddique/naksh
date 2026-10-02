@@ -19,6 +19,7 @@ export function HumanMessage({ message, isGrouped }: HumanMessageProps) {
       backgroundColor={colors.humanBubble}
       isGrouped={isGrouped}
       text={message.text}
+      createdAt={message.createdAt}
       textColor={colors.text}
     />
   );
