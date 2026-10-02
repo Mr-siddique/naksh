@@ -47,6 +47,7 @@ export function Composer({ onSent }: ComposerProps) {
     }
     sendMessage(text);
     setText('');
+    inputRef.current?.clear();
     onSent?.();
   };
 
