@@ -1,23 +1,15 @@
 import { fetchConversation } from '../../../../services/chatApi';
 import type { Message } from '../../conversation.types';
 import { useConversationStore } from '../useConversationStore';
+import { deferred } from '../../../../testUtils';
 
 jest.mock('../../../../services/chatApi');
 const mockFetch = jest.mocked(fetchConversation);
 
-type Deferred = {
-  resolve: (messages: Message[]) => void;
-  reject: (error: Error) => void;
-};
-
-/** Makes the next fetchConversation() call pending until settled by hand. */
-function nextFetch(): Deferred {
-  let deferred!: Deferred;
-  const pending = new Promise<Message[]>((resolve, reject) => {
-    deferred = { resolve, reject };
-  });
-  mockFetch.mockReturnValueOnce(pending);
-  return deferred;
+function nextFetch() {
+  const call = deferred<Message[]>();
+  mockFetch.mockReturnValueOnce(call.promise);
+  return call;
 }
 
 const MESSAGES: Message[] = [
