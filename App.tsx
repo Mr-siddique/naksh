@@ -10,6 +10,7 @@ import {
   createNativeStackNavigator,
   type NativeStackNavigationOptions,
 } from '@react-navigation/native-stack';
+import { DevScenarioButton } from './src/features/conversation/components/DevScenarioButton';
 import { ConversationScreen } from './src/features/conversation/screens/ConversationScreen';
 import { type Colors, darkColors, lightColors } from './src/theme/colors';
 import { useTheme } from './src/theme/useTheme';
@@ -39,6 +40,7 @@ const NAV_DARK = toNavigationTheme(DarkTheme, darkColors);
 
 const conversationOptions: NativeStackNavigationOptions = {
   title: 'AI Astrologer',
+  headerRight: () => <DevScenarioButton />,
 };
 
 function App() {
