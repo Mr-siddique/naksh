@@ -7,6 +7,13 @@ import { selectIsBusy, useConversationStore } from '../useConversationStore';
 import { deferred } from '../../../../testUtils';
 
 jest.mock('../../../../services/chatApi');
+jest.mock('../../utils/streamText', () => ({
+  streamText: (options: import('../../utils/streamText').StreamTextOptions) => {
+    options.onProgress(options.length);
+    options.onDone();
+    return () => {};
+  },
+}));
 const mockSend = jest.mocked(sendToApi);
 
 function nextSend() {

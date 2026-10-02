@@ -4,10 +4,6 @@ import type { AiMessage, Message } from '../../conversation.types';
 import { useConversationStore } from '../../store/useConversationStore';
 import { TimelineList } from '../TimelineList';
 import { isHost } from '../../../../testUtils';
-
-/** True for a host (native) element such as 'Text' or 'View'. */
-
-// Count renders per message id by replacing the leaf message components.
 const mockRendered: string[] = [];
 jest.mock('../AiMessage', () => ({
   AiMessage: ({ message }: { message: { id: string } }) => {
@@ -45,8 +41,6 @@ function setMessages(messages: Message[]) {
 }
 
 beforeEach(() => {
-  // buildTimeline labels days relative to "now"; pin it to the fixtures' day.
-  // advanceTimers keeps Reanimated/FlatList timers running in real time.
   jest.useFakeTimers({ now: new Date(2026, 9, 1, 15, 0), advanceTimers: true });
   mockRendered.length = 0;
   useConversationStore.getState().reset();
@@ -101,5 +95,21 @@ describe('TimelineList', () => {
     setMessages([MESSAGES[0], changed, MESSAGES[2]]);
 
     expect(mockRendered).toEqual(['a1']);
+  });
+
+  it('NFR1: a streaming frame does not re-render the list rows', () => {
+    renderList();
+    mockRendered.length = 0;
+    ReactTestRenderer.act(() => {
+      useConversationStore.setState({
+        streaming: { messageId: 'a2', visibleLength: 3 },
+      });
+    });
+    ReactTestRenderer.act(() => {
+      useConversationStore.setState({
+        streaming: { messageId: 'a2', visibleLength: 4 },
+      });
+    });
+    expect(mockRendered).toEqual([]);
   });
 });

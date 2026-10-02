@@ -1,3 +1,7 @@
+import { useState } from 'react';
+import { StyleSheet } from 'react-native';
+import Animated, { FadeIn, ReduceMotion } from 'react-native-reanimated';
+import { MOTION } from '../../../theme/motion';
 import { useTheme } from '../../../theme/useTheme';
 import { AI_SENDER } from '../constants';
 import type { AiMessage as AiMessageType } from '../conversation.types';
@@ -5,15 +9,25 @@ import { RecommendationRow } from '../recommendations/RecommendationRow';
 import { useConversationStore } from '../store/useConversationStore';
 import { Bubble } from './Bubble';
 import { FeedbackBar } from './FeedbackBar';
+import { StreamingText } from './StreamingText';
 
 type AiMessageProps = {
   message: AiMessageType;
   isGrouped: boolean;
 };
 
+const REVEAL = FadeIn.duration(MOTION.base).reduceMotion(ReduceMotion.System);
+
 export function AiMessage({ message, isGrouped }: AiMessageProps) {
   const { colors } = useTheme();
   const openActions = useConversationStore(s => s.openActions);
+  const isStreaming = useConversationStore(
+    s => s.streaming?.messageId === message.id,
+  );
+  const [hasStreamed, setHasStreamed] = useState(isStreaming);
+  if (isStreaming && !hasStreamed) {
+    setHasStreamed(true);
+  }
 
   return (
     <Bubble
@@ -25,13 +39,38 @@ export function AiMessage({ message, isGrouped }: AiMessageProps) {
       isGrouped={isGrouped}
       text={message.text}
       textColor={colors.text}
-      onLongPress={() => openActions(message.id)}
+      renderText={
+        isStreaming
+          ? style => (
+              <StreamingText
+                messageId={message.id}
+                text={message.text}
+                style={style}
+                color={colors.primary}
+              />
+            )
+          : undefined
+      }
+      onLongPress={isStreaming ? undefined : () => openActions(message.id)}
     >
-      <RecommendationRow
-        messageId={message.id}
-        recommendations={message.recommendations}
-      />
-      <FeedbackBar messageId={message.id} feedback={message.feedback} />
+      {isStreaming ? null : (
+        <Animated.View
+          entering={hasStreamed ? REVEAL : undefined}
+          style={styles.extras}
+        >
+          <RecommendationRow
+            messageId={message.id}
+            recommendations={message.recommendations}
+          />
+          <FeedbackBar messageId={message.id} feedback={message.feedback} />
+        </Animated.View>
+      )}
     </Bubble>
   );
 }
+
+const styles = StyleSheet.create({
+  extras: {
+    alignSelf: 'stretch',
+  },
+});

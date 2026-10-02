@@ -11,7 +11,9 @@ import type {
   ReplyRef,
   SendStatus,
 } from '../conversation.types';
+import { MOCK_AI_REPLY } from '../mockConversation';
 import { applyRating, toggleFeedbackReason } from '../utils/nextFeedback';
+import { streamText } from '../utils/streamText';
 
 export type LoadState = 'loading' | 'ready' | 'error';
 
@@ -21,6 +23,7 @@ type ConversationState = {
   actionMessageId: string | null;
   toast: string | null;
   replyTo: ReplyRef | null;
+  streaming: { messageId: string; visibleLength: number } | null;
 
   load(): Promise<void>;
   reset(): void;
@@ -39,36 +42,49 @@ type ConversationState = {
 
 const initialState: Pick<
   ConversationState,
-  'loadState' | 'messages' | 'actionMessageId' | 'toast' | 'replyTo'
+  | 'loadState'
+  | 'messages'
+  | 'actionMessageId'
+  | 'toast'
+  | 'replyTo'
+  | 'streaming'
 > = {
   loadState: 'loading',
   messages: [],
   actionMessageId: null,
   toast: null,
   replyTo: null,
+  streaming: null,
 };
 
 export const TOAST_MS = 1500;
+export const STREAM_CHARS_PER_SECOND = 45;
 
 let session = 0;
 let localIdCounter = 0;
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
+let cancelStream: (() => void) | undefined;
 
 const clearToastTimer = () => {
   clearTimeout(toastTimer);
   toastTimer = undefined;
 };
 
+const stopStream = () => {
+  cancelStream?.();
+  cancelStream = undefined;
+};
+
+const withStatus = (messages: Message[], id: string, status: SendStatus) =>
+  messages.map(m => (m.id === id && m.type === 'user' ? { ...m, status } : m));
+
 export const selectIsBusy = (state: ConversationState): boolean =>
+  state.streaming !== null ||
   state.messages.some(m => m.type === 'user' && m.status === 'sending');
 
 export const useConversationStore = create<ConversationState>()((set, get) => {
   const setStatus = (id: string, status: SendStatus) =>
-    set(state => ({
-      messages: state.messages.map(m =>
-        m.id === id && m.type === 'user' ? { ...m, status } : m,
-      ),
-    }));
+    set(state => ({ messages: withStatus(state.messages, id, status) }));
 
   const updateFeedback = (
     id: string,
@@ -89,12 +105,40 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
       return { messages };
     });
 
+  const markSentAndStreamReply = (id: string) => {
+    const replyId = `ai-local-${++localIdCounter}`;
+    set(state => ({
+      messages: [
+        ...withStatus(state.messages, id, 'sent'),
+        {
+          id: replyId,
+          type: 'ai',
+          text: MOCK_AI_REPLY.text,
+          recommendations: [...MOCK_AI_REPLY.recommendations],
+          createdAt: new Date().toISOString(),
+        },
+      ],
+      streaming: { messageId: replyId, visibleLength: 0 },
+    }));
+    stopStream();
+    cancelStream = streamText({
+      length: MOCK_AI_REPLY.text.length,
+      charsPerSecond: STREAM_CHARS_PER_SECOND,
+      onProgress: visibleLength =>
+        set({ streaming: { messageId: replyId, visibleLength } }),
+      onDone: () => {
+        cancelStream = undefined;
+        set({ streaming: null });
+      },
+    });
+  };
+
   const deliver = async (id: string, text: string) => {
     const startedIn = session;
     try {
       await sendToApi(text);
       if (startedIn === session) {
-        setStatus(id, 'sent');
+        markSentAndStreamReply(id);
       }
     } catch {
       if (startedIn === session) {
@@ -109,6 +153,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
     async load() {
       const startedIn = ++session;
       clearToastTimer();
+      stopStream();
       set(initialState);
       try {
         const messages = await fetchConversation();
@@ -125,6 +170,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
     reset() {
       session++;
       clearToastTimer();
+      stopStream();
       set(initialState);
     },
 
@@ -166,7 +212,7 @@ export const useConversationStore = create<ConversationState>()((set, get) => {
 
     openActions(id) {
       const message = get().messages.find(m => m.id === id);
-      if (message?.type === 'ai') {
+      if (message?.type === 'ai' && get().streaming?.messageId !== id) {
         set({ actionMessageId: id });
       }
     },

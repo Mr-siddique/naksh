@@ -1,5 +1,12 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  type StyleProp,
+  StyleSheet,
+  Text,
+  type TextStyle,
+  View,
+} from 'react-native';
 import { MESSAGE_GUTTER, radius, spacing } from '../../../theme/spacing';
 import { AI_SENDER } from '../constants';
 import { truncate } from '../utils/truncate';
@@ -15,6 +22,7 @@ type BubbleProps = {
   text: string;
   textColor: string;
   quote?: string;
+  renderText?: (style: StyleProp<TextStyle>) => ReactNode;
   onLongPress?: () => void;
   children?: ReactNode;
 };
@@ -31,9 +39,11 @@ export function Bubble({
   text,
   textColor,
   quote,
+  renderText,
   onLongPress,
   children,
 }: BubbleProps) {
+  const textStyle = [styles.text, { color: textColor }];
   const bubbleProps = {
     testID: 'message-bubble',
     accessible: true,
@@ -51,7 +61,11 @@ export function Bubble({
   const content = (
     <>
       {quote ? <ReplyQuote text={quote} color={textColor} /> : null}
-      <Text style={[styles.text, { color: textColor }]}>{text}</Text>
+      {renderText ? (
+        renderText(textStyle)
+      ) : (
+        <Text style={textStyle}>{text}</Text>
+      )}
     </>
   );
 
@@ -73,23 +87,19 @@ export function Bubble({
           {sender}
         </Text>
       )}
-      {onLongPress ? (
-        <Pressable
-          {...bubbleProps}
-          onLongPress={onLongPress}
-          accessibilityActions={LONG_PRESS_ACTIONS}
-          accessibilityHint="Long-press for actions"
-          onAccessibilityAction={event => {
-            if (event.nativeEvent.actionName === 'longpress') {
-              onLongPress();
-            }
-          }}
-        >
-          {content}
-        </Pressable>
-      ) : (
-        <View {...bubbleProps}>{content}</View>
-      )}
+      <Pressable
+        {...bubbleProps}
+        onLongPress={onLongPress}
+        accessibilityActions={onLongPress ? LONG_PRESS_ACTIONS : undefined}
+        accessibilityHint={onLongPress ? 'Long-press for actions' : undefined}
+        onAccessibilityAction={event => {
+          if (event.nativeEvent.actionName === 'longpress') {
+            onLongPress?.();
+          }
+        }}
+      >
+        {content}
+      </Pressable>
       {children}
     </View>
   );
