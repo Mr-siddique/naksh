@@ -16,3 +16,5 @@ export const radius = {
 export const MIN_TOUCH = 44;
 
 export const MESSAGE_GUTTER = spacing.lg;
+
+export const DISABLED_OPACITY = 0.4;

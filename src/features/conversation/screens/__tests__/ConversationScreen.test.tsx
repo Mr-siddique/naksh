@@ -1,11 +1,17 @@
 import React from 'react';
-import { StyleSheet } from 'react-native';
+import { HeaderHeightContext } from '@react-navigation/elements';
+import { FlatList, StyleSheet } from 'react-native';
 import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
-import { fetchConversation } from '../../../../services/chatApi';
+import {
+  fetchConversation,
+  sendMessage as sendToApi,
+} from '../../../../services/chatApi';
 import type { Message } from '../../conversation.types';
 import { useConversationStore } from '../../store/useConversationStore';
+import { Composer } from '../../components/Composer';
 import { TimelineList } from '../../components/TimelineList';
 import { ConversationScreen } from '../ConversationScreen';
+import { deferred, findPressable, isHost } from '../../../../testUtils';
 
 jest.mock('../../../../services/chatApi');
 const mockFetch = jest.mocked(fetchConversation);
@@ -19,26 +25,21 @@ const MESSAGES: Message[] = [
   },
 ];
 
-type Deferred = {
-  resolve: (messages: Message[]) => void;
-  reject: (error: Error) => void;
-};
-
-/** Makes the next fetchConversation() call pending until settled by hand. */
-function nextFetch(): Deferred {
-  let deferred!: Deferred;
-  const pending = new Promise<Message[]>((resolve, reject) => {
-    deferred = { resolve, reject };
-  });
-  mockFetch.mockReturnValueOnce(pending);
-  return deferred;
+function nextFetch() {
+  const call = deferred<Message[]>();
+  mockFetch.mockReturnValueOnce(call.promise);
+  return call;
 }
 
 let tree: ReactTestRenderer.ReactTestRenderer;
 
 async function renderScreen() {
   await ReactTestRenderer.act(() => {
-    tree = ReactTestRenderer.create(<ConversationScreen />);
+    tree = ReactTestRenderer.create(
+      <HeaderHeightContext.Provider value={0}>
+        <ConversationScreen />
+      </HeaderHeightContext.Provider>,
+    );
   });
 }
 
@@ -71,8 +72,21 @@ const retryHostView = () =>
       node.props.accessibilityLabel === 'Retry',
   );
 
+async function typeAndSend(text: string) {
+  const input = tree.root.find((node: ReactTestInstance) =>
+    isHost(node, 'TextInput'),
+  );
+  await ReactTestRenderer.act(() => input.props.onChangeText(text));
+  await ReactTestRenderer.act(() => {
+    findPressable(tree.root, 'Send').props.onPress();
+  });
+}
+
+const hasComposer = () => tree.root.findAllByType(Composer).length > 0;
+
 beforeEach(() => {
   mockFetch.mockReset();
+  jest.mocked(sendToApi).mockReturnValue(new Promise(() => {}));
   useConversationStore.getState().reset();
 });
 
@@ -155,5 +169,57 @@ describe('ConversationScreen', () => {
     expect(
       StyleSheet.flatten(view.props.style).minHeight,
     ).toBeGreaterThanOrEqual(44);
+  });
+
+  it('R1.3: keeps the composer available in the empty state', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve([]));
+
+    expect(hasText('Start your conversation.')).toBe(true);
+    expect(hasComposer()).toBe(true);
+    const input = tree.root.find((node: ReactTestInstance) =>
+      isHost(node, 'TextInput'),
+    );
+    expect(input.props.editable).not.toBe(false);
+  });
+
+  it('R1.4: hides the composer when loading fails', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.reject(new Error('offline')));
+
+    expect(hasComposer()).toBe(false);
+  });
+
+  it('R1.1: hides the composer while the conversation is loading', async () => {
+    nextFetch();
+    await renderScreen();
+    expect(hasComposer()).toBe(false);
+  });
+
+  it('R1.6: sending from the empty state replaces it with the timeline', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve([]));
+
+    await typeAndSend('Hello');
+
+    expect(hasText('Start your conversation.')).toBe(false);
+    tree.root.findByType(TimelineList);
+    expect(hasText('Hello')).toBe(true);
+  });
+
+  it('R2.5: scrolls to the latest message after a send', async () => {
+    const scroll = jest
+      .spyOn(FlatList.prototype, 'scrollToOffset')
+      .mockImplementation(() => {});
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(MESSAGES));
+
+    await typeAndSend('Hello');
+    expect(scroll).toHaveBeenCalledWith({ offset: 0, animated: true });
+    scroll.mockRestore();
   });
 });

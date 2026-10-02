@@ -3,10 +3,9 @@ import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 import type { AiMessage, Message } from '../../conversation.types';
 import { useConversationStore } from '../../store/useConversationStore';
 import { TimelineList } from '../TimelineList';
+import { isHost } from '../../../../testUtils';
 
 /** True for a host (native) element such as 'Text' or 'View'. */
-const isHost = (node: ReactTestInstance, name: string) =>
-  (node.type as unknown) === name;
 
 // Count renders per message id by replacing the leaf message components.
 const mockRendered: string[] = [];

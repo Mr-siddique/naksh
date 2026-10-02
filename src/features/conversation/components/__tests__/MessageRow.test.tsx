@@ -3,10 +3,9 @@ import { StyleSheet } from 'react-native';
 import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
 import type { AiMessage, Message } from '../../conversation.types';
 import { MessageRow } from '../MessageRow';
+import { isHost } from '../../../../testUtils';
 
 /** True for a host (native) element such as 'Text' or 'View'. */
-const isHost = (node: ReactTestInstance, name: string) =>
-  (node.type as unknown) === name;
 
 const CREATED_AT = '2026-10-01T09:00:00.000Z';
 

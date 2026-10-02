@@ -8,9 +8,7 @@ import {
   type RecommendationConfig,
 } from '../recommendationRegistry';
 import { RecommendationRow } from '../RecommendationRow';
-
-const isHost = (node: ReactTestInstance, name: string) =>
-  (node.type as unknown) === name;
+import { isHost } from '../../../../testUtils';
 
 const RECS: Recommendation[] = [
   {
