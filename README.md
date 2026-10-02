@@ -67,7 +67,5 @@ It was a time-boxed build, so some things were left on purpose:
 
 - All data is mocked, nothing persists, and the AI reply is always the same canned text.
 - No recommendation detail screens, auth, or push notifications.
-- The action sheet has an enter animation but no exit animation.
 - The delete animation uses Reanimated's layout transition on an inverted list, which can be fiddly across versions. If it misbehaves on a device, the fallback is a two-step delete (animate the row out, then remove it).
-- A screen reader isn't told when a streamed reply finishes, which I'd add next.
 - I checked the UI on the iOS simulator. Android and the animations on real devices still need a manual pass.
