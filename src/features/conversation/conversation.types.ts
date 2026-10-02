@@ -7,9 +7,7 @@ export type RecommendationType =
   | 'remedy';
 
 export type Recommendation = {
-  /** Unique only within its parent message (R1.8). */
   id: string;
-  /** Open string: unknown types render the fallback card (R3.5). */
   type: string;
   title: string;
   subtitle?: string;
@@ -28,7 +26,6 @@ export type Feedback = {
   reasons: FeedbackReason[];
 };
 
-/** Snapshot of the replied-to message, so the quote survives its deletion. */
 export type ReplyRef = {
   messageId: string;
   text: string;
@@ -37,7 +34,6 @@ export type ReplyRef = {
 type BaseMessage = {
   id: string;
   text: string;
-  /** ISO 8601. */
   createdAt: string;
 };
 
@@ -45,7 +41,6 @@ export type SystemMessage = BaseMessage & { type: 'system' };
 
 export type UserMessage = BaseMessage & {
   type: 'user';
-  /** Absent for messages that arrived with the conversation. */
   status?: SendStatus;
   replyTo?: ReplyRef;
 };

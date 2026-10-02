@@ -1,11 +1,6 @@
 import type { Message } from '../features/conversation/conversation.types';
 import { createMockConversation } from '../features/conversation/mockConversation';
 
-/*
- * Mock chat backend with simulated latency. The scenario is switched from the
- * dev menu (R7) to force each load and send state.
- */
-
 export type Scenario = 'normal' | 'empty' | 'loadFails' | 'sendsFail';
 
 export const LOAD_DELAY_MS = 800;

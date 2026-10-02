@@ -13,5 +13,4 @@ export const radius = {
   pill: 999,
 } as const;
 
-/** Minimum touch target size (NFR4). */
 export const MIN_TOUCH = 44;

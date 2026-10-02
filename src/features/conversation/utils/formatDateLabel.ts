@@ -21,7 +21,6 @@ function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-/** "Today", "Yesterday", or e.g. "28 Sep 2026", by local calendar day (R2.3). */
 export function formatDateLabel(date: Date, now: Date): string {
   if (isSameDay(date, now)) {
     return 'Today';

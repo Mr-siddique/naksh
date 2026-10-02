@@ -1,14 +1,12 @@
 import type { Message, TimelineItem } from '../conversation.types';
 import { formatDateLabel } from './formatDateLabel';
 
-/** Local calendar day, e.g. "date-2026-10-01"; also the separator's key. */
 function dayKey(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   return `date-${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Id of the latest user message, but only if it has been sent (R6.7). */
 function latestUserIdIfSent(messages: Message[]): string | undefined {
   for (let i = messages.length - 1; i >= 0; i--) {
     const message = messages[i];
@@ -19,14 +17,6 @@ function latestUserIdIfSent(messages: Message[]): string | undefined {
   return undefined;
 }
 
-/**
- * Turns messages into items for the inverted timeline: newest first, with a
- * date separator above each day's first message (R2.3), grouping flags
- * (R2.4) and the single "Sent" label (R6.7). Expects messages in
- * chronological order with valid ISO `createdAt`, as the store keeps them.
- * Message objects pass through by reference so memoized rows skip
- * re-rendering (NFR1).
- */
 export function buildTimeline(messages: Message[], now: Date): TimelineItem[] {
   const items: TimelineItem[] = [];
   const sentUserId = latestUserIdIfSent(messages);

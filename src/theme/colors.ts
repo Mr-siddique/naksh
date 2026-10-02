@@ -22,7 +22,7 @@ export const lightColors: Colors = {
   surface: '#FFFFFF',
   border: '#E3E1EC',
   text: '#1B1A22',
-  textMuted: '#6E6B7B',
+  textMuted: '#67647A',
   primary: '#5B3FD9',
   onPrimary: '#FFFFFF',
   danger: '#C23340',

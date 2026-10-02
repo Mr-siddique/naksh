@@ -1,0 +1,159 @@
+import React from 'react';
+import { StyleSheet } from 'react-native';
+import ReactTestRenderer, { type ReactTestInstance } from 'react-test-renderer';
+import { fetchConversation } from '../../../../services/chatApi';
+import type { Message } from '../../conversation.types';
+import { useConversationStore } from '../../store/useConversationStore';
+import { TimelineList } from '../../components/TimelineList';
+import { ConversationScreen } from '../ConversationScreen';
+
+jest.mock('../../../../services/chatApi');
+const mockFetch = jest.mocked(fetchConversation);
+
+const MESSAGES: Message[] = [
+  {
+    id: '1',
+    type: 'system',
+    text: 'Started',
+    createdAt: '2026-10-01T09:00:00.000Z',
+  },
+];
+
+type Deferred = {
+  resolve: (messages: Message[]) => void;
+  reject: (error: Error) => void;
+};
+
+/** Makes the next fetchConversation() call pending until settled by hand. */
+function nextFetch(): Deferred {
+  let deferred!: Deferred;
+  const pending = new Promise<Message[]>((resolve, reject) => {
+    deferred = { resolve, reject };
+  });
+  mockFetch.mockReturnValueOnce(pending);
+  return deferred;
+}
+
+let tree: ReactTestRenderer.ReactTestRenderer;
+
+async function renderScreen() {
+  await ReactTestRenderer.act(() => {
+    tree = ReactTestRenderer.create(<ConversationScreen />);
+  });
+}
+
+/** Runs an action and flushes the resulting async store updates. */
+async function settle(action: () => void) {
+  await ReactTestRenderer.act(async () => {
+    action();
+  });
+}
+
+const hasText = (text: string) =>
+  tree.root.findAll(
+    (node: ReactTestInstance) =>
+      typeof node.type === 'string' && node.props.children === text,
+  ).length > 0;
+
+/** The Retry Pressable (composite: owns onPress). */
+const retryButton = () =>
+  tree.root.find(
+    (node: ReactTestInstance) =>
+      node.props.accessibilityLabel === 'Retry' &&
+      typeof node.props.onPress === 'function',
+  );
+
+/** The native view Retry renders (owns the resolved style). */
+const retryHostView = () =>
+  tree.root.find(
+    (node: ReactTestInstance) =>
+      typeof node.type === 'string' &&
+      node.props.accessibilityLabel === 'Retry',
+  );
+
+beforeEach(() => {
+  mockFetch.mockReset();
+  useConversationStore.getState().reset();
+});
+
+afterEach(async () => {
+  await ReactTestRenderer.act(() => tree?.unmount());
+});
+
+describe('ConversationScreen', () => {
+  it('R1.1: requests the conversation on mount and shows the loading state', async () => {
+    nextFetch();
+    await renderScreen();
+
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(hasText('Loading conversation...')).toBe(true);
+  });
+
+  it('R1.2: renders the timeline once messages arrive', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve(MESSAGES));
+
+    expect(hasText('Loading conversation...')).toBe(false);
+    tree.root.findByType(TimelineList);
+  });
+
+  it('R1.3: shows the empty state for a conversation with no messages', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.resolve([]));
+
+    expect(hasText('Start your conversation.')).toBe(true);
+  });
+
+  it('R1.4: shows the error state with a Retry button when loading fails', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.reject(new Error('offline')));
+
+    expect(hasText('Unable to load conversation.')).toBe(true);
+    expect(hasText('Retry')).toBe(true);
+  });
+
+  it('R1.5: Retry shows loading again and repeats the request', async () => {
+    const failed = nextFetch();
+    await renderScreen();
+    await settle(() => failed.reject(new Error('offline')));
+
+    const retry = nextFetch();
+    await ReactTestRenderer.act(() => {
+      retryButton().props.onPress(); // block body: act() must not await the still-pending load()
+    });
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(hasText('Loading conversation...')).toBe(true);
+
+    await settle(() => retry.resolve(MESSAGES));
+    tree.root.findByType(TimelineList);
+  });
+
+  it('R1.1: starts a fresh load every time the screen opens', async () => {
+    const first = nextFetch();
+    await renderScreen();
+    await settle(() => first.resolve(MESSAGES));
+    await ReactTestRenderer.act(() => tree.unmount());
+    // Closing the screen resets the store.
+    expect(useConversationStore.getState().messages).toEqual([]);
+
+    nextFetch();
+    await renderScreen();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(hasText('Loading conversation...')).toBe(true);
+  });
+
+  it('NFR4: Retry is an accessible button with a 44pt touch target', async () => {
+    const request = nextFetch();
+    await renderScreen();
+    await settle(() => request.reject(new Error('offline')));
+
+    const view = retryHostView();
+    expect(view.props.accessibilityRole).toBe('button');
+    expect(
+      StyleSheet.flatten(view.props.style).minHeight,
+    ).toBeGreaterThanOrEqual(44);
+  });
+});
